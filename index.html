@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HS / CA Code Lookup</title>
 
-  <!-- Styling (requires internet to load Tailwind CSS). -->
+  <!-- Styling (requires internet to load Tailwind). -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <script>window.BRAND = { primary: "#00846C" };</script>
@@ -21,19 +21,15 @@
     @media (prefers-color-scheme: dark) {
       .thead-tint { background-color: color-mix(in srgb, var(--brand) 18%, #0b1220); }
     }
-
-    /* Highlight for matched tokens */
     mark { padding: 0 2px; border-radius: 4px; background: color-mix(in srgb, var(--brand) 22%, transparent); }
 
-    /* Mobile tap target */
+    /* Mobile: increase touch target */
     .tap { min-height: 44px; }
   </style>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-<script>
-  document.documentElement.style.setProperty("--brand", window.BRAND.primary);
-</script>
+<script>document.documentElement.style.setProperty("--brand", window.BRAND.primary);</script>
 
 <header class="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
   <div class="mx-auto max-w-7xl px-4 py-5">
@@ -53,8 +49,8 @@
   </div>
 </header>
 
-<!-- Sticky search -->
-<div class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+<!-- Sticky mobile search bar -->
+<div class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
   <div class="mx-auto max-w-7xl px-4 py-3">
     <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
 
@@ -91,7 +87,7 @@
 
     <div class="mt-2 flex items-center justify-between">
       <p class="text-xs text-slate-500 dark:text-slate-400">
-        Multiple words allowed. Any word can match.
+        Multiple words allowed. All words must match.
       </p>
       <span id="countPill"
         class="rounded-full px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-100"
@@ -100,6 +96,7 @@
       </span>
     </div>
 
+    <!-- Did you mean -->
     <div id="didYouMean" class="mt-3 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <span class="text-slate-600 dark:text-slate-300">No results. Did you mean:</span>
       <span id="dymItems" class="ml-1"></span>
@@ -132,7 +129,7 @@
       <div class="mx-auto max-w-md">
         <div class="text-base font-semibold">No matching records</div>
         <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Try a shorter keyword (e.g. “bread” vs “wholegrain bread”), or search by HS/CA code prefix.
+          Try fewer keywords or a shorter HS/CA prefix.
         </div>
       </div>
     </div>
@@ -149,7 +146,6 @@
 </div>
 
 <script>
-  // ---------- DOM ----------
   const qEl = document.getElementById("q");
   const rowsEl = document.getElementById("rows");
   const emptyState = document.getElementById("emptyState");
@@ -165,42 +161,27 @@
   const didYouMean = document.getElementById("didYouMean");
   const dymItems = document.getElementById("dymItems");
 
-  // ---------- Data ----------
   let data = [];
   let filtered = [];
 
-  // Autocomplete suggestions (codes + short phrases)
   const suggestPool = [];
   const suggestSet = new Set();
   const MAX_SUGGEST_POOL = 20000;
 
-  // Did-you-mean word dictionary (only real words from descriptions)
-  const wordSet = new Set();
-  const wordList = [];
-  const MAX_WORDS = 30000;
-
-  // ---------- Helpers ----------
   const norm = (v) => String(v ?? "").toLowerCase().trim();
   const clean = (v) => String(v ?? "").trim();
   const escHtml = (s) => String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 
   function pick(r, keys) {
     for (const k of keys) {
-      if (r && r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== "") {
-        return String(r[k]);
-      }
+      if (r && r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== "") return String(r[k]);
     }
     return "";
   }
 
-  function tokenize(q) {
-    return norm(q).split(/\s+/).filter(Boolean);
-  }
+  function tokenize(q) { return norm(q).split(/\s+/).filter(Boolean); }
 
   function showToast(msg) {
     toastEl.textContent = msg;
@@ -215,11 +196,8 @@
       showToast("Copied");
     } catch {
       const ta = document.createElement("textarea");
-      ta.value = txt;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      ta.value = txt; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove();
       showToast("Copied");
     }
   }
@@ -227,7 +205,6 @@
   function highlight(text, tokens) {
     const raw = clean(text);
     if (!raw || !tokens.length) return escHtml(raw);
-
     let out = escHtml(raw);
     for (const t of tokens) {
       if (!t) continue;
@@ -239,12 +216,11 @@
 
   function setCount(n) { countPill.textContent = String(n); }
 
-  // ---------- Search ----------
   function rowHaystack(r) {
     return [
       pick(r, ["hs", "hs_code", "HS Code"]),
       pick(r, ["hs_desc", "HS Description", "description", "Description"]),
-      pick(r, ["CA Product Code", "ca_product_code", "ca_code", "ca_prod_code"]),
+      pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
       pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
       pick(r, ["hs_ca_imp", "CA Import"]),
       pick(r, ["hs_ca_exp", "CA Export"]),
@@ -262,7 +238,7 @@
 
       const hs = pick(r, ["hs", "hs_code", "HS Code"]);
       const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code", "ca_prod_code"]);
+      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
       const caProdDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
       const caImp = pick(r, ["hs_ca_imp", "CA Import"]);
       const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
@@ -313,10 +289,8 @@
 
   function applyFilter() {
     const tokens = tokenize(qEl.value);
-
     didYouMean.classList.add("hidden");
     dymItems.innerHTML = "";
-    acBox.classList.add("hidden");
 
     if (!tokens.length) {
       filtered = data;
@@ -324,13 +298,12 @@
       return;
     }
 
-    // OR logic: any token match; partial match: includes()
     const out = [];
     for (const r of data) {
       const hay = rowHaystack(r);
-      let ok = false;
+      let ok = true;
       for (const t of tokens) {
-        if (hay.includes(t)) { ok = true; break; }
+        if (!hay.includes(t)) { ok = false; break; }
       }
       if (ok) out.push(r);
     }
@@ -341,7 +314,6 @@
     if (filtered.length === 0) buildDidYouMean(tokens.join(" "));
   }
 
-  // ---------- Autocomplete ----------
   function addSuggestion(s) {
     const v = clean(s);
     if (!v) return;
@@ -352,53 +324,35 @@
     suggestPool.push(v);
   }
 
-  function addWord(w) {
-    if (!w) return;
-    if (w.length < 4) return;
-    if (w.length > 32) return;
-    if (wordSet.has(w)) return;
-    wordSet.add(w);
-    wordList.push(w);
-  }
-
-  function buildPools() {
+  function buildSuggestPool() {
     for (const r of data) {
-      if (suggestPool.length < MAX_SUGGEST_POOL) {
-        const hs = pick(r, ["hs", "hs_code", "HS Code"]);
-        const ca = pick(r, ["CA Product Code", "ca_product_code", "ca_code", "ca_prod_code"]);
-        const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-        const caDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
+      if (suggestPool.length >= MAX_SUGGEST_POOL) break;
 
-        addSuggestion(hs);
-        addSuggestion(ca);
+      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
+      const ca = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
+      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
+      const caDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
 
-        if (hsDesc) addSuggestion(hsDesc.split(/\s+/).slice(0, 6).join(" "));
-        if (caDesc) addSuggestion(caDesc.split(/\s+/).slice(0, 6).join(" "));
+      addSuggestion(hs);
+      addSuggestion(ca);
+
+      if (hsDesc) addSuggestion(hsDesc.split(/\s+/).slice(0, 6).join(" "));
+      if (caDesc) addSuggestion(caDesc.split(/\s+/).slice(0, 6).join(" "));
+
+      // Add individual words so typos like "Cofffe" can suggest "coffee"
+      const text = `${hsDesc} ${caDesc}`.toLowerCase();
+      const words = text.split(/[^a-z]+/).filter(w => w.length >= 4);
+      for (const w of words) {
+        addSuggestion(w);
+        if (suggestPool.length >= MAX_SUGGEST_POOL) break;
       }
-
-      // Build did-you-mean dictionary only from description text (not codes)
-      if (wordList.length < MAX_WORDS) {
-        const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-        const caDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
-        const text = `${hsDesc} ${caDesc}`.toLowerCase();
-        // letters only, split on non-letters
-        const words = text.split(/[^a-z]+/).filter(Boolean);
-        for (const w of words) {
-          addWord(w);
-          if (wordList.length >= MAX_WORDS) break;
-        }
-      }
-
-      if (suggestPool.length >= MAX_SUGGEST_POOL && wordList.length >= MAX_WORDS) break;
     }
   }
 
   function showAutocomplete(items) {
     acList.innerHTML = "";
-    if (!items.length) {
-      acBox.classList.add("hidden");
-      return;
-    }
+    if (!items.length) { acBox.classList.add("hidden"); return; }
+
     for (const s of items) {
       const li = document.createElement("li");
       li.innerHTML = `
@@ -438,17 +392,13 @@
     showAutocomplete(hits);
   }
 
-  // ---------- Did you mean ----------
   function levenshtein(a, b) {
-    a = a.toLowerCase();
-    b = b.toLowerCase();
+    a = a.toLowerCase(); b = b.toLowerCase();
     const m = a.length, n = b.length;
     if (!m) return n;
     if (!n) return m;
-
     const dp = new Array(n + 1);
     for (let j = 0; j <= n; j++) dp[j] = j;
-
     for (let i = 1; i <= m; i++) {
       let prev = dp[0];
       dp[0] = i;
@@ -463,51 +413,42 @@
   }
 
   function buildDidYouMean(query) {
-    const q = clean(query).toLowerCase();
+    const q = clean(query);
     if (!q) return;
 
-    // Only try did-you-mean for alphabetic-ish queries (avoid code-like queries)
-    if (!/[a-z]/.test(q)) return;
-    if (q.length < 4) return;
-
-    // Compare against word dictionary only (not codes)
-    const MAX_COMPARE = 7000;
-    const pool = wordList.slice(0, Math.min(wordList.length, MAX_COMPARE));
-
-    const qLen = q.length;
     const candidates = [];
+    const MAX_COMPARE = 5000;
+    const pool = suggestPool.slice(0, Math.min(suggestPool.length, MAX_COMPARE));
+    const qLen = q.length;
 
-    for (const w of pool) {
-      const wLen = w.length;
-      if (Math.abs(wLen - qLen) > 8) continue;
-      const d = levenshtein(q, w);
-      const score = d / Math.max(1, Math.max(qLen, wLen));
-      candidates.push({ w, score });
+    for (const s of pool) {
+      const sLen = s.length;
+      if (Math.abs(sLen - qLen) > 20) continue;
+      const d = levenshtein(q, s);
+      const score = d / Math.max(1, Math.max(qLen, sLen));
+      candidates.push({ s, score });
     }
-
     candidates.sort((a, b) => a.score - b.score);
-    const best = candidates.slice(0, 3).filter(x => x.score <= 0.35);
 
+    const best = candidates.slice(0, 3).filter(x => x.score <= 0.45);
     if (!best.length) return;
 
     dymItems.innerHTML = "";
-    for (const { w } of best) {
+    for (const { s } of best) {
       const btn = document.createElement("button");
       btn.className = "tap ml-2 rounded-full px-3 py-2 text-sm font-medium text-white brand-bg";
-      btn.textContent = w;
+      btn.textContent = s;
       btn.addEventListener("click", () => {
-        qEl.value = w;
+        qEl.value = s;
         didYouMean.classList.add("hidden");
         applyFilter();
         qEl.focus();
       });
       dymItems.appendChild(btn);
     }
-
     didYouMean.classList.remove("hidden");
   }
 
-  // ---------- Events ----------
   qEl.addEventListener("input", () => {
     updateAutocomplete();
     applyFilter();
@@ -525,13 +466,10 @@
   });
 
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      acBox.classList.add("hidden");
-      didYouMean.classList.add("hidden");
-    }
+    if (e.key === "/" && document.activeElement !== qEl) { e.preventDefault(); qEl.focus(); }
+    if (e.key === "Escape") { acBox.classList.add("hidden"); didYouMean.classList.add("hidden"); }
   });
 
-  // ---------- Init ----------
   (async function init() {
     try {
       const res = await fetch("./data.json", { cache: "no-store" });
@@ -540,8 +478,7 @@
       if (!Array.isArray(json)) throw new Error("data.json is not an array");
 
       data = json;
-
-      buildPools();
+      buildSuggestPool();
 
       statusChip.classList.remove("hidden");
       loadMsg.textContent = `Loaded ${data.length.toLocaleString()} rows`;
