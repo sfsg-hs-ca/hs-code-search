@@ -5,136 +5,111 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HS / CA Code Lookup</title>
 
-  <!-- Styling (no installs). Requires internet to load Tailwind CSS. -->
+  <!-- Styling (requires internet to load Tailwind). -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <script>
-    window.BRAND = { primary: "#00846C" };
-  </script>
+  <script>window.BRAND = { primary: "#00846C" };</script>
 
   <style>
     :root { color-scheme: light dark; }
     body { font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
 
     .brand-bg { background-color: var(--brand); }
-    .brand-text { color: var(--brand); }
     .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
 
     .thead-tint { background-color: color-mix(in srgb, var(--brand) 16%, white); }
     @media (prefers-color-scheme: dark) {
       .thead-tint { background-color: color-mix(in srgb, var(--brand) 18%, #0b1220); }
     }
-
     mark { padding: 0 2px; border-radius: 4px; background: color-mix(in srgb, var(--brand) 22%, transparent); }
+
+    /* Mobile: increase touch target for suggestion items */
+    .tap { min-height: 44px; }
   </style>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-<script>
-  document.documentElement.style.setProperty("--brand", window.BRAND.primary);
-</script>
+<script>document.documentElement.style.setProperty("--brand", window.BRAND.primary);</script>
 
-<header class="border-b border-slate-200 bg-white/75 backdrop-blur dark:border-slate-800 dark:bg-slate-950/75">
-  <div class="mx-auto max-w-7xl px-4 py-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-4">
-        <img src="./logo.png" alt="Company logo"
-             class="h-16 w-auto rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800" />
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight">HS / CA Code Lookup</h1>
-          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Search by HS Code, CA Product Code, or description.
-          </p>
-        </div>
+<header class="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+  <div class="mx-auto max-w-7xl px-4 py-5">
+    <div class="flex items-center gap-4">
+      <img src="./logo.png" alt="Company logo"
+        class="h-14 w-auto rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800" />
+      <div class="min-w-0">
+        <h1 class="text-lg font-semibold leading-tight sm:text-2xl sm:tracking-tight">
+          Look Up Your Product's HS Code and Singapore CA Code Here
+        </h1>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          Search by HS Code, CA Product Code, or description.
+        </p>
       </div>
+      <span id="statusChip" class="ml-auto hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">Ready</span>
+    </div>
+  </div>
+</header>
 
-      <div class="flex items-center gap-2">
-        <span id="statusChip" class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">Ready</span>
+<!-- Sticky mobile search bar -->
+<div class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+  <div class="mx-auto max-w-7xl px-4 py-3">
+    <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
 
-        <button id="exportBtn"
-          class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
-                 focus:outline-none brand-ring
-                 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
-          Export CSV
-        </button>
+    <div class="relative mt-1">
+      <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                  focus-within:border-transparent focus-within:brand-ring
+                  dark:border-slate-800 dark:bg-slate-900">
+        <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+
+        <input id="q" type="text"
+          class="w-full bg-transparent text-base outline-none placeholder:text-slate-400 sm:text-sm"
+          placeholder="HS (01012100), CA (VBA0HO), or keywords"
+          autocomplete="off" inputmode="search" />
 
         <button id="clearBtn"
-          class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
+          class="tap rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium shadow-sm hover:bg-slate-50
                  focus:outline-none brand-ring
                  dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
           Clear
         </button>
       </div>
-    </div>
 
-    <div class="mt-5 grid gap-3 lg:grid-cols-3">
-      <div class="lg:col-span-2">
-        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
-
-        <div class="relative mt-1">
-          <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
-                      focus-within:border-transparent focus-within:brand-ring
-                      dark:border-slate-800 dark:bg-slate-900">
-            <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-
-            <input id="q" type="text"
-              class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder="Type HS (01012100) or CA (VBA0HO) or keywords"
-              autocomplete="off" />
-
-            <span class="hidden sm:inline-flex items-center rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              Press /
-            </span>
-          </div>
-
-          <!-- Autocomplete -->
-          <div id="acBox"
-               class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
-            <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Suggestions
-            </div>
-            <ul id="acList" class="max-h-72 overflow-auto"></ul>
-          </div>
+      <!-- Autocomplete -->
+      <div id="acBox"
+           class="absolute z-40 mt-2 hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          Suggestions
         </div>
-
-        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Tip: multiple words work (e.g. “fresh apples”). All words must match.
-        </p>
-
-        <div id="didYouMean" class="mt-3 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <span class="text-slate-600 dark:text-slate-300">No results.</span>
-          <span class="text-slate-600 dark:text-slate-300">Did you mean:</span>
-          <span id="dymItems" class="ml-1"></span>
-        </div>
-      </div>
-
-      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-center justify-between">
-          <div class="text-xs font-medium text-slate-600 dark:text-slate-300">Results</div>
-          <span id="countPill"
-            class="rounded-full px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-100"
-            style="background-color: color-mix(in srgb, #00846C 14%, white);">
-            0
-          </span>
-        </div>
-
-        <div id="loadMsg" class="mt-3 text-xs text-slate-500 dark:text-slate-400">Loading data…</div>
-
-        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-          Click HS / CA codes to copy.
-        </div>
+        <ul id="acList" class="max-h-72 overflow-auto"></ul>
       </div>
     </div>
+
+    <div class="mt-2 flex items-center justify-between">
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Multiple words allowed. All words must match.
+      </p>
+      <span id="countPill"
+        class="rounded-full px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-100"
+        style="background-color: color-mix(in srgb, #00846C 14%, white);">
+        0
+      </span>
+    </div>
+
+    <div id="didYouMean" class="mt-3 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <span class="text-slate-600 dark:text-slate-300">No results. Did you mean:</span>
+      <span id="dymItems" class="ml-1"></span>
+    </div>
+
+    <div id="loadMsg" class="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading data…</div>
   </div>
-</header>
+</div>
 
-<main class="mx-auto max-w-7xl px-4 py-6">
+<main class="mx-auto max-w-7xl px-4 py-5">
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div class="overflow-auto">
       <table class="min-w-full text-left text-sm">
-        <thead class="sticky top-0 thead-tint text-xs uppercase tracking-wide text-slate-800 dark:text-slate-100">
+        <thead class="sticky top-[108px] sm:top-[104px] thead-tint text-xs uppercase tracking-wide text-slate-800 dark:text-slate-100">
           <tr>
             <th class="px-4 py-3">HS Code</th>
             <th class="px-4 py-3">HS Description</th>
@@ -159,25 +134,22 @@
     </div>
   </section>
 
-  <footer class="mt-6 text-xs text-slate-500 dark:text-slate-400">
-    Runs entirely in your browser. No server required.
-  </footer>
+  <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+    Tip: tap HS / CA codes to copy.
+  </div>
 </main>
 
-<!-- Toast -->
 <div id="toast"
   class="pointer-events-none fixed bottom-5 left-1/2 hidden -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white shadow-lg brand-bg">
   Copied
 </div>
 
 <script>
-  // ---------- DOM ----------
   const qEl = document.getElementById("q");
   const rowsEl = document.getElementById("rows");
   const emptyState = document.getElementById("emptyState");
   const statusChip = document.getElementById("statusChip");
   const clearBtn = document.getElementById("clearBtn");
-  const exportBtn = document.getElementById("exportBtn");
   const loadMsg = document.getElementById("loadMsg");
   const countPill = document.getElementById("countPill");
   const toastEl = document.getElementById("toast");
@@ -188,24 +160,18 @@
   const didYouMean = document.getElementById("didYouMean");
   const dymItems = document.getElementById("dymItems");
 
-  // ---------- Data ----------
   let data = [];
   let filtered = [];
 
-  // Suggestion pool (codes + key phrases). Capped for performance.
   const suggestPool = [];
   const suggestSet = new Set();
-  const MAX_SUGGEST_POOL = 20000; // cap
+  const MAX_SUGGEST_POOL = 20000;
 
-  // ---------- Helpers ----------
   const norm = (v) => String(v ?? "").toLowerCase().trim();
   const clean = (v) => String(v ?? "").trim();
   const escHtml = (s) => String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 
   function pick(r, keys) {
     for (const k of keys) {
@@ -214,10 +180,7 @@
     return "";
   }
 
-  function tokenize(q) {
-    // split on whitespace; keep simple to avoid surprises
-    return norm(q).split(/\s+/).filter(Boolean);
-  }
+  function tokenize(q) { return norm(q).split(/\s+/).filter(Boolean); }
 
   function showToast(msg) {
     toastEl.textContent = msg;
@@ -231,13 +194,9 @@
       await navigator.clipboard.writeText(txt);
       showToast("Copied");
     } catch {
-      // fallback
       const ta = document.createElement("textarea");
-      ta.value = txt;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      ta.value = txt; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove();
       showToast("Copied");
     }
   }
@@ -245,12 +204,9 @@
   function highlight(text, tokens) {
     const raw = clean(text);
     if (!raw || !tokens.length) return escHtml(raw);
-
-    // highlight each token (case-insensitive), without nested marks
     let out = escHtml(raw);
     for (const t of tokens) {
       if (!t) continue;
-      // escape token for regex
       const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
       out = out.replace(re, (m) => `<mark>${escHtml(m)}</mark>`);
     }
@@ -259,7 +215,18 @@
 
   function setCount(n) { countPill.textContent = String(n); }
 
-  // ---------- Rendering ----------
+  function rowHaystack(r) {
+    return [
+      pick(r, ["hs", "hs_code", "HS Code"]),
+      pick(r, ["hs_desc", "HS Description", "description", "Description"]),
+      pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
+      pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
+      pick(r, ["hs_ca_imp", "CA Import"]),
+      pick(r, ["hs_ca_exp", "CA Export"]),
+      pick(r, ["hs_ca_trans", "CA Trans"]),
+    ].map(norm).join(" | ");
+  }
+
   function render(items, tokens) {
     rowsEl.innerHTML = "";
     emptyState.classList.toggle("hidden", items.length !== 0);
@@ -285,37 +252,32 @@
 
       tr.innerHTML = `
         <td class="px-4 py-2.5 align-top">
-          <button class="hsCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(hs)}">${highlight(hs, tokens)}</button>
-        </td>
-
-        <td class="px-4 py-2.5 align-top text-slate-800 dark:text-slate-100">
-          ${highlight(hsDesc, tokens)}
+          <button class="tap hsCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(hs)}">
+            ${highlight(hs, tokens)}
+          </button>
         </td>
 
         <td class="px-4 py-2.5 align-top">
-          <button class="caCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(caCode)}">${highlight(caCode, tokens)}</button>
+          <div class="break-words">${highlight(hsDesc, tokens)}</div>
+        </td>
+
+        <td class="px-4 py-2.5 align-top">
+          <button class="tap caCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(caCode)}">
+            ${highlight(caCode, tokens)}
+          </button>
         </td>
 
         <td class="px-4 py-2.5 align-top hidden md:table-cell">
-          ${highlight(caProdDesc, tokens)}
+          <div class="break-words">${highlight(caProdDesc, tokens)}</div>
         </td>
 
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
-          ${highlight(caImp, tokens)}
-        </td>
-
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
-          ${highlight(caExp, tokens)}
-        </td>
-
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
-          ${highlight(caTrans, tokens)}
-        </td>
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caImp, tokens)}</td>
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caExp, tokens)}</td>
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caTrans, tokens)}</td>
       `;
       rowsEl.appendChild(tr);
     }
 
-    // wire copy clicks (event delegation safe too, but simple here)
     rowsEl.querySelectorAll(".hsCopy, .caCopy").forEach(btn => {
       btn.addEventListener("click", () => {
         const val = btn.getAttribute("data-copy") || "";
@@ -324,24 +286,8 @@
     });
   }
 
-  // ---------- Search ----------
-  function rowHaystack(r) {
-    // keep deterministic list of fields
-    return [
-      pick(r, ["hs", "hs_code", "HS Code"]),
-      pick(r, ["hs_desc", "HS Description", "description", "Description"]),
-      pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
-      pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
-      pick(r, ["hs_ca_imp", "CA Import"]),
-      pick(r, ["hs_ca_exp", "CA Export"]),
-      pick(r, ["hs_ca_trans", "CA Trans"]),
-    ].map(norm).join(" | ");
-  }
-
   function applyFilter() {
     const tokens = tokenize(qEl.value);
-
-    // hide did-you-mean by default; only show when 0 matches AND user typed something
     didYouMean.classList.add("hidden");
     dymItems.innerHTML = "";
 
@@ -351,7 +297,6 @@
       return;
     }
 
-    // all tokens must match (AND)
     const out = [];
     for (const r of data) {
       const hay = rowHaystack(r);
@@ -365,15 +310,13 @@
     filtered = out;
     render(filtered, tokens);
 
-    if (filtered.length === 0) {
-      buildDidYouMean(tokens.join(" "));
-    }
+    if (filtered.length === 0) buildDidYouMean(tokens.join(" "));
   }
 
-  // ---------- Autocomplete ----------
   function addSuggestion(s) {
     const v = clean(s);
     if (!v) return;
+    if (v.length > 80) return;
     const key = v.toLowerCase();
     if (suggestSet.has(key)) return;
     suggestSet.add(key);
@@ -381,7 +324,6 @@
   }
 
   function buildSuggestPool() {
-    // Codes + descriptions from data, but capped.
     for (const r of data) {
       if (suggestPool.length >= MAX_SUGGEST_POOL) break;
 
@@ -393,23 +335,26 @@
       addSuggestion(hs);
       addSuggestion(ca);
 
-      // Add a few “key phrases”: first 6 words of descriptions
       if (hsDesc) addSuggestion(hsDesc.split(/\s+/).slice(0, 6).join(" "));
       if (caDesc) addSuggestion(caDesc.split(/\s+/).slice(0, 6).join(" "));
+
+      const text = `${hsDesc} ${caDesc}`.toLowerCase();
+      const words = text.split(/[^a-z]+/).filter(w => w.length >= 4);
+      for (const w of words) {
+        addSuggestion(w);
+        if (suggestPool.length >= MAX_SUGGEST_POOL) break;
+      }
     }
   }
 
   function showAutocomplete(items) {
     acList.innerHTML = "";
-    if (!items.length) {
-      acBox.classList.add("hidden");
-      return;
-    }
+    if (!items.length) { acBox.classList.add("hidden"); return; }
 
     for (const s of items) {
       const li = document.createElement("li");
       li.innerHTML = `
-        <button class="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-950/50">
+        <button class="tap w-full px-3 py-3 text-left text-base sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-950/50">
           ${escHtml(s)}
         </button>
       `;
@@ -425,10 +370,6 @@
   }
 
   function updateAutocomplete() {
-    const q = norm(qEl.value);
-    if (!q || q.length < 2) { acBox.classList.add("hidden"); return; }
-
-    // Use only last token for autocomplete, so multi-word searches remain useful
     const tokens = tokenize(qEl.value);
     const last = tokens[tokens.length - 1] || "";
     if (last.length < 2) { acBox.classList.add("hidden"); return; }
@@ -436,48 +377,33 @@
     const hits = [];
     const max = 8;
 
-    // Prioritize prefix matches, then contains
     for (const s of suggestPool) {
       const n = s.toLowerCase();
-      if (n.startsWith(last)) {
-        hits.push(s);
-        if (hits.length >= max) break;
-      }
+      if (n.startsWith(last)) { hits.push(s); if (hits.length >= max) break; }
     }
     if (hits.length < max) {
       for (const s of suggestPool) {
         const n = s.toLowerCase();
-        if (!n.startsWith(last) && n.includes(last)) {
-          hits.push(s);
-          if (hits.length >= max) break;
-        }
+        if (!n.startsWith(last) && n.includes(last)) { hits.push(s); if (hits.length >= max) break; }
       }
     }
     showAutocomplete(hits);
   }
 
-  // ---------- Did-you-mean (fuzzy) ----------
   function levenshtein(a, b) {
     a = a.toLowerCase(); b = b.toLowerCase();
     const m = a.length, n = b.length;
     if (!m) return n;
     if (!n) return m;
-
-    // 1D DP for speed
     const dp = new Array(n + 1);
     for (let j = 0; j <= n; j++) dp[j] = j;
-
     for (let i = 1; i <= m; i++) {
       let prev = dp[0];
       dp[0] = i;
       for (let j = 1; j <= n; j++) {
         const temp = dp[j];
         const cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
-        dp[j] = Math.min(
-          dp[j] + 1,          // deletion
-          dp[j - 1] + 1,      // insertion
-          prev + cost         // substitution
-        );
+        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost);
         prev = temp;
       }
     }
@@ -488,32 +414,27 @@
     const q = clean(query);
     if (!q) return;
 
-    // Compare against suggestion pool, but cap comparisons for speed.
     const candidates = [];
     const MAX_COMPARE = 5000;
     const pool = suggestPool.slice(0, Math.min(suggestPool.length, MAX_COMPARE));
-
-    // Prefer shorter candidates around same length
     const qLen = q.length;
 
     for (const s of pool) {
       const sLen = s.length;
-      if (Math.abs(sLen - qLen) > 20) continue; // skip far lengths
+      if (Math.abs(sLen - qLen) > 20) continue;
       const d = levenshtein(q, s);
-      // simple scoring: smaller distance better; normalize by length
       const score = d / Math.max(1, Math.max(qLen, sLen));
       candidates.push({ s, score });
     }
-
     candidates.sort((a, b) => a.score - b.score);
-    const best = candidates.slice(0, 3).filter(x => x.score <= 0.45); // threshold for usefulness
 
+    const best = candidates.slice(0, 3).filter(x => x.score <= 0.45);
     if (!best.length) return;
 
     dymItems.innerHTML = "";
     for (const { s } of best) {
       const btn = document.createElement("button");
-      btn.className = "ml-2 rounded-full px-3 py-1 text-xs font-medium text-white brand-bg";
+      btn.className = "tap ml-2 rounded-full px-3 py-2 text-sm font-medium text-white brand-bg";
       btn.textContent = s;
       btn.addEventListener("click", () => {
         qEl.value = s;
@@ -526,58 +447,6 @@
     didYouMean.classList.remove("hidden");
   }
 
-  // ---------- CSV Export ----------
-  function toCsvValue(v) {
-    const s = String(v ?? "");
-    // escape double quotes by doubling
-    const esc = s.replaceAll('"', '""');
-    return `"${esc}"`;
-  }
-
-  function exportCsv() {
-    const rows = filtered.length ? filtered : data;
-
-    const headers = [
-      "HS Code",
-      "HS Description",
-      "CA Product Code",
-      "CA Product Description",
-      "CA Import",
-      "CA Export",
-      "CA Trans",
-    ];
-
-    const lines = [];
-    lines.push(headers.map(toCsvValue).join(","));
-
-    for (const r of rows) {
-      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
-      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
-      const caProdDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
-      const caImp = pick(r, ["hs_ca_imp", "CA Import"]);
-      const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
-      const caTrans = pick(r, ["hs_ca_trans", "CA Trans"]);
-
-      lines.push([
-        hs, hsDesc, caCode, caProdDesc, caImp, caExp, caTrans
-      ].map(toCsvValue).join(","));
-    }
-
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `hs_ca_lookup_${stamp}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  // ---------- Events ----------
   qEl.addEventListener("input", () => {
     updateAutocomplete();
     applyFilter();
@@ -594,22 +463,12 @@
     applyFilter();
   });
 
-  exportBtn.addEventListener("click", exportCsv);
-
+  // Desktop shortcut still works; mobile ignores it naturally
   window.addEventListener("keydown", (e) => {
-    // Press "/" to focus search
-    if (e.key === "/" && document.activeElement !== qEl) {
-      e.preventDefault();
-      qEl.focus();
-    }
-    // Escape closes autocomplete
-    if (e.key === "Escape") {
-      acBox.classList.add("hidden");
-      didYouMean.classList.add("hidden");
-    }
+    if (e.key === "/" && document.activeElement !== qEl) { e.preventDefault(); qEl.focus(); }
+    if (e.key === "Escape") { acBox.classList.add("hidden"); didYouMean.classList.add("hidden"); }
   });
 
-  // ---------- Init ----------
   (async function init() {
     try {
       const res = await fetch("./data.json", { cache: "no-store" });
@@ -618,8 +477,6 @@
       if (!Array.isArray(json)) throw new Error("data.json is not an array");
 
       data = json;
-
-      // Build suggestion pool after load
       buildSuggestPool();
 
       statusChip.classList.remove("hidden");
