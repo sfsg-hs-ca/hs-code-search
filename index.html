@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Singapore HS / CA Product Code Lookup</title>
+  <style>
+    :root { --border:#d0d7de; --muted:#57606a; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fff; color:#111; }
+    header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+    header h1 { margin: 0 0 6px 0; font-size: 18px; }
+    header p { margin: 0; color: var(--muted); font-size: 13px; }
+    main { padding: 18px 24px; }
+    .bar { display:flex; flex-wrap:wrap; gap: 10px; align-items:center; }
+    input[type="search"] { flex: 1 1 420px; padding: 10px 12px; border:1px solid var(--border); border-radius: 8px; font-size: 14px; }
+    .chips { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .chip { display:flex; gap:6px; align-items:center; font-size: 13px; color:#111; }
+    .status { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    table { width:100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+    th, td { border:1px solid var(--border); padding: 8px; vertical-align: top; }
+    th { background:#f6f8fa; text-align:left; position: sticky; top: 0; z-index: 1; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .btnrow { margin-top: 10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+    button { padding: 8px 10px; border:1px solid var(--border); border-radius: 8px; background:#f6f8fa; cursor:pointer; font-size: 12px; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .foot { margin-top: 16px; color: var(--muted); font-size: 12px; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#f6f8fa; border:1px solid var(--border); padding: 1px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Singapore HS / CA Product Code Lookup</h1>
+    <p>Client-side search using <span class="mono">data.json</span> generated from <span class="mono">AllHSCAProductCode20260102155740.xls</span>.</p>
+  </header>
+
+  <main>
+    <div class="bar">
+      <input id="q" type="search" placeholder="Search HS code (e.g. 01012100), description keywords, or CA product code…" autocomplete="off" />
+      <div class="chips" aria-label="Search fields">
+        <label class="chip"><input type="checkbox" id="f_hs" checked> HS code</label>
+        <label class="chip"><input type="checkbox" id="f_hsd" checked> HS description</label>
+        <label class="chip"><input type="checkbox" id="f_ca" checked> CA product code</label>
+        <label class="chip"><input type="checkbox" id="f_cad" checked> CA product description</label>
+      </div>
+    </div>
+
+    <div class="status" id="status">Loading dataset…</div>
+
+    <div class="btnrow">
+      <button id="clearBtn" type="button">Clear</button>
+      <button id="copyBtn" type="button" disabled>Copy results (CSV)</button>
+      <button id="moreBtn" type="button" disabled>Show more</button>
+      <span class="status">Tip: press <span class="kbd">/</span> to focus the search box.</span>
+    </div>
+
+    <div style="overflow:auto; max-height: 65vh; border:1px solid var(--border); border-radius: 10px; margin-top:12px;">
+      <table id="tbl" aria-label="Results table">
+        <thead>
+          <tr>
+            <th>HS Code</th>
+            <th>HS Description</th>
+            <th>HS Unit</th>
+            <th>HS CA (Imp/Exp/Trans)</th>
+            <th>CA Product Code</th>
+            <th>CA Product Description</th>
+            <th>CA Unit</th>
+            <th>CA (Imp/Exp/Trans)</th>
+            <th>Customs Duty</th>
+            <th>Excise Duty</th>
+          </tr>
+        </thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+
+    <div class="foot">
+      Data note: The spreadsheet includes multiple rows per HS code where different CA product codes apply. Duty fields are displayed as provided in the source file.
+    </div>
+  </main>
+
+<script>
+(() => {
+  const state = {
+    rows: [],
+    filtered: [],
+    shown: 0,
+    pageSize: 200
+  };
+
+  const els = {
+    q: document.getElementById('q'),
+    f_hs: document.getElementById('f_hs'),
+    f_hsd: document.getElementById('f_hsd'),
+    f_ca: document.getElementById('f_ca'),
+    f_cad: document.getElementById('f_cad'),
+    status: document.getElementById('status'),
+    tb: document.getElementById('tb'),
+    clearBtn: document.getElementById('clearBtn'),
+    moreBtn: document.getElementById('moreBtn'),
+    copyBtn: document.getElementById('copyBtn'),
+  };
+
+  function norm(s) {
+    return (s || "").toString().toLowerCase().trim();
+  }
+
+  function normDigits(s) {
+    const t = (s || "").toString().replace(/\D+/g, "");
+    // Singapore HS codes in this file are 8 digits; allow prefix search and pad if short.
+    if (!t) return "";
+    return t.length >= 8 ? t.slice(0, 8) : t.padStart(8, "0");
+  }
+
+  function fieldsSelected() {
+    return {
+      hs: els.f_hs.checked,
+      hsd: els.f_hsd.checked,
+      ca: els.f_ca.checked,
+      cad: els.f_cad.checked,
+    };
+  }
+
+  function matchRow(row, q, qDigits, sel) {
+    if (!q) return true;
+
+    // Digit-heavy query: prioritize HS match (exact/prefix).
+    if (qDigits) {
+      if (sel.hs && row.hs && (row.hs === qDigits || row.hs.startsWith(qDigits))) return true;
+      // If user typed fewer than 8 digits, allow prefix match on raw digits too.
+      const raw = q.replace(/\D+/g, "");
+      if (raw && sel.hs && row.hs && row.hs.startsWith(raw.padStart(raw.length, "0"))) return true;
+      // Also allow CA code search if selected.
+      if (sel.ca && row.ca_code && row.ca_code.toLowerCase().includes(norm(q))) return true;
+      return false;
+    }
+
+    const t = norm(q);
+    if (sel.hsd && row.hs_desc && row.hs_desc.toLowerCase().includes(t)) return true;
+    if (sel.cad && row.ca_desc && row.ca_desc.toLowerCase().includes(t)) return true;
+    if (sel.ca && row.ca_code && row.ca_code.toLowerCase().includes(t)) return true;
+    if (sel.hs && row.hs && row.hs.toLowerCase().includes(t)) return true;
+    return false;
+  }
+
+  function renderRows(reset=false) {
+    if (reset) {
+      els.tb.innerHTML = "";
+      state.shown = 0;
+    }
+    const next = Math.min(state.filtered.length, state.shown + state.pageSize);
+    const frag = document.createDocumentFragment();
+
+    for (let i = state.shown; i < next; i++) {
+      const r = state.filtered[i];
+      const tr = document.createElement('tr');
+
+      const hsCA = [r.hs_ca_imp, r.hs_ca_exp, r.hs_ca_trans].filter(Boolean).join(" / ");
+      const caCA = [r.ca_ca_imp, r.ca_ca_exp, r.ca_ca_trans].filter(Boolean).join(" / ");
+
+      tr.innerHTML = `
+        <td class="mono">${escapeHtml(r.hs)}</td>
+        <td>${escapeHtml(r.hs_desc)}</td>
+        <td class="mono">${escapeHtml(r.hs_unit)}</td>
+        <td class="mono">${escapeHtml(hsCA)}</td>
+        <td class="mono">${escapeHtml(r.ca_code || "")}</td>
+        <td>${escapeHtml(r.ca_desc || "")}</td>
+        <td class="mono">${escapeHtml(r.ca_unit || "")}</td>
+        <td class="mono">${escapeHtml(caCA)}</td>
+        <td class="mono">${escapeHtml(r.customs || "")}</td>
+        <td class="mono">${escapeHtml(r.excise || "")}</td>
+      `;
+      frag.appendChild(tr);
+    }
+    els.tb.appendChild(frag);
+    state.shown = next;
+
+    els.moreBtn.disabled = state.shown >= state.filtered.length;
+    els.copyBtn.disabled = state.filtered.length === 0;
+
+    els.status.textContent = `${state.filtered.length.toLocaleString()} match(es). Showing ${state.shown.toLocaleString()} of ${state.filtered.length.toLocaleString()}.`;
+  }
+
+  function escapeHtml(s) {
+    return (s ?? "").toString()
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function applyFilter() {
+    const q = els.q.value || "";
+    const sel = fieldsSelected();
+    const digits = q.replace(/\D+/g, "");
+    const qDigits = digits ? normDigits(q) : "";
+
+    state.filtered = state.rows.filter(r => matchRow(r, q, qDigits, sel));
+    renderRows(true);
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  function toCSV(rows) {
+    const header = ["HS Code","HS Description","HS Qty Unit","HS CA Import","HS CA Export","HS CA Transhipment","CA Product Code","CA Product Description","CA Product Qty Unit","CA CA Import","CA CA Export","CA CA Transhipment","Customs Duty","Excise Duty"];
+    const esc = (v) => `"${(v ?? "").toString().replaceAll('"', '""')}"`;
+    const lines = [header.join(",")];
+    for (const r of rows) {
+      lines.push([
+        r.hs, r.hs_desc, r.hs_unit, r.hs_ca_imp, r.hs_ca_exp, r.hs_ca_trans,
+        r.ca_code, r.ca_desc, r.ca_unit, r.ca_ca_imp, r.ca_ca_exp, r.ca_ca_trans,
+        r.customs, r.excise
+      ].map(esc).join(","));
+    }
+    return lines.join("\n");
+  }
+
+  async function copyCSV() {
+    const csv = toCSV(state.filtered.slice(0, state.shown));
+    await navigator.clipboard.writeText(csv);
+    els.status.textContent = `Copied ${Math.min(state.shown, state.filtered.length).toLocaleString()} row(s) as CSV to clipboard.`;
+    setTimeout(() => renderRows(true), 800);
+  }
+
+  async function load() {
+    try {
+      const res = await fetch("./data.json", {cache: "no-store"});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      state.rows = await res.json();
+      state.filtered = state.rows;
+      renderRows(true);
+      els.status.textContent = `Loaded ${state.rows.length.toLocaleString()} row(s). Type to search.`;
+    } catch (e) {
+      els.status.textContent = `Failed to load data.json: ${e.message}`;
+    }
+  }
+
+  // Events
+  els.q.addEventListener('input', debounce(applyFilter, 120));
+  [els.f_hs, els.f_hsd, els.f_ca, els.f_cad].forEach(cb => cb.addEventListener('change', applyFilter));
+  els.clearBtn.addEventListener('click', () => { els.q.value=""; applyFilter(); els.q.focus(); });
+  els.moreBtn.addEventListener('click', () => renderRows(false));
+  els.copyBtn.addEventListener('click', () => copyCSV());
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === "/" && document.activeElement !== els.q) {
+      e.preventDefault();
+      els.q.focus();
+    }
+  });
+
+  load();
+})();
+</script>
+
+</body>
+</html>
