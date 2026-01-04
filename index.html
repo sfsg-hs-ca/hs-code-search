@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HS Code Lookup</title>
+  <title>HS / CA Code Lookup</title>
 
-  <!-- Styling (no installs). Requires internet to load this CSS. -->
+  <!-- Styling -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <script>
-    // Brand colour
+    // Corporate brand colour
     window.BRAND = { primary: "#00846C" };
   </script>
 
@@ -17,238 +17,258 @@
     :root { color-scheme: light dark; }
 
     /* Font: Aptos if installed, otherwise fallback */
-    body { font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+    body {
+      font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    }
 
     /* Brand helpers */
     .brand-bg { background-color: var(--brand); }
     .brand-text { color: var(--brand); }
-    .brand-border { border-color: color-mix(in srgb, var(--brand) 35%, transparent); }
-    .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent); }
+    .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
+    .brand-border { border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
+
+    /* Header tint (green + white) */
+    .thead-tint {
+      background-color: color-mix(in srgb, var(--brand) 16%, white);
+    }
+    @media (prefers-color-scheme: dark) {
+      .thead-tint {
+        background-color: color-mix(in srgb, var(--brand) 18%, #0b1220);
+      }
+    }
   </style>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-  <script>
-    document.documentElement.style.setProperty("--brand", (window.BRAND?.primary || "#00846C"));
-  </script>
+<script>
+  document.documentElement.style.setProperty("--brand", window.BRAND.primary);
+</script>
 
-  <header class="border-b border-slate-200/70 bg-white/70 backdrop-blur dark:border-slate-800 dark:bg-slate-950/70">
-    <div class="mx-auto max-w-6xl px-4 py-6">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <img src="./logo.png" alt="Company logo"
-               class="h-10 w-10 rounded-lg object-contain bg-white p-1 shadow-sm dark:bg-slate-900" />
-          <div>
-            <h1 class="text-2xl font-semibold tracking-tight">HS Code Lookup</h1>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-              Search HS codes and CA codes.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <span id="statusChip"
-            class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">
-            Ready
-          </span>
-
-          <button id="clearBtn"
-            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
-                   focus:outline-none brand-ring
-                   dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
-            Clear
-          </button>
-        </div>
-      </div>
-
-      <div class="mt-5 grid gap-3 md:grid-cols-3">
-        <div class="md:col-span-2">
-          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
-
-          <div class="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm
-                      focus-within:border-transparent focus-within:brand-ring
-                      dark:border-slate-800 dark:bg-slate-900">
-            <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-
-            <input id="q" type="text"
-              class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder="Type HS code or keywords (e.g. 0803, apples, frozen)"
-              autocomplete="off" />
-          </div>
-
-          <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Tip: use partial HS code prefixes (e.g. “08” or “0803”).
+<header class="border-b border-slate-200 bg-white/75 backdrop-blur dark:border-slate-800 dark:bg-slate-950/75">
+  <div class="mx-auto max-w-7xl px-4 py-6">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex items-center gap-4">
+        <img src="./logo.png" alt="Company logo"
+             class="h-16 w-auto rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800" />
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">HS / CA Code Lookup</h1>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            Search by HS Code, CA Product Code, or description.
           </p>
         </div>
+      </div>
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div class="text-xs font-medium text-slate-600 dark:text-slate-300">Result limit</div>
-          <div class="mt-2 flex items-center gap-2">
-            <input id="limit" type="number" min="10" max="5000" value="200"
-              class="w-28 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none
-                     focus:border-transparent brand-ring
-                     dark:border-slate-800 dark:bg-slate-950" />
-            <span class="text-xs text-slate-500 dark:text-slate-400">rows</span>
-          </div>
-          <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-            Showing up to <span class="font-medium" id="limitLabel">200</span> matches.
-          </div>
-        </div>
+      <div class="flex items-center gap-2">
+        <span id="statusChip"
+          class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">
+          Ready
+        </span>
+        <button id="clearBtn"
+          class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
+                 focus:outline-none brand-ring
+                 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
+          Clear
+        </button>
       </div>
     </div>
-  </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-6">
-    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold">Results</span>
+    <div class="mt-5 grid gap-3 lg:grid-cols-3">
+      <div class="lg:col-span-2">
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
+        <div class="mt-1 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                    focus-within:border-transparent focus-within:brand-ring
+                    dark:border-slate-800 dark:bg-slate-900">
+          <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input id="q" type="text"
+            class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            placeholder="Type HS (01012100) or CA (VBA0HO) or keywords"
+            autocomplete="off" />
+          <span class="hidden sm:inline-flex items-center rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            Press /
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Tip: try partial prefixes (e.g. “01” or “0101”).
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex items-center justify-between">
+          <div class="text-xs font-medium text-slate-600 dark:text-slate-300">Results</div>
           <span id="countPill"
-            class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+            class="rounded-full px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-100"
+            style="background-color: color-mix(in srgb, #00846C 14%, white);">
             0
           </span>
         </div>
-        <div id="loadMsg" class="text-xs text-slate-500 dark:text-slate-400">Loading data…</div>
-      </div>
 
-      <div class="overflow-auto">
-        <table class="min-w-full text-left text-sm">
-          <thead class="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-            <tr>
-              <th class="px-4 py-3">HS Code</th>
-              <th class="px-4 py-3">HS Description</th>
-              <th class="px-4 py-3">CA Import</th>
-              <th class="px-4 py-3">CA Export</th>
-              <th class="px-4 py-3">CA Trans</th>
-              <th class="px-4 py-3">CA Desc</th>
-            </tr>
-          </thead>
-          <tbody id="rows" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>
-        </table>
-      </div>
+        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+          Data source: <span class="font-medium">data.json</span>
+        </div>
 
-      <div id="emptyState" class="hidden px-4 py-10 text-center">
-        <div class="mx-auto max-w-md">
-          <div class="text-base font-semibold">No matches</div>
-          <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Try fewer keywords or a shorter HS prefix.
-          </div>
+        <div id="loadMsg" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          Loading data…
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</header>
 
-    <footer class="mt-6 text-xs text-slate-500 dark:text-slate-400">
-      Data source: <span class="font-medium">data.json</span>.
-    </footer>
-  </main>
+<main class="mx-auto max-w-7xl px-4 py-6">
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="overflow-auto">
+      <table class="min-w-full text-left text-sm">
+        <thead class="sticky top-0 thead-tint text-xs uppercase tracking-wide text-slate-800 dark:text-slate-100">
+          <tr>
+            <th class="px-4 py-3">HS Code</th>
+            <th class="px-4 py-3">HS Description</th>
+            <th class="px-4 py-3">CA Product Code</th>
+            <th class="px-4 py-3">CA Product Description</th>
+            <th class="px-4 py-3">CA Import</th>
+            <th class="px-4 py-3">CA Export</th>
+            <th class="px-4 py-3">CA Trans</th>
+          </tr>
+        </thead>
+        <tbody id="rows" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>
+      </table>
+    </div>
 
-  <script>
-    const qEl = document.getElementById("q");
-    const rowsEl = document.getElementById("rows");
-    const countPill = document.getElementById("countPill");
-    const loadMsg = document.getElementById("loadMsg");
-    const emptyState = document.getElementById("emptyState");
-    const clearBtn = document.getElementById("clearBtn");
-    const statusChip = document.getElementById("statusChip");
-    const limitEl = document.getElementById("limit");
-    const limitLabel = document.getElementById("limitLabel");
+    <div id="emptyState" class="hidden px-6 py-10 text-center">
+      <div class="mx-auto max-w-md">
+        <div class="text-base font-semibold">No matching records</div>
+        <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          Try fewer keywords or a shorter HS/CA prefix.
+        </div>
+      </div>
+    </div>
+  </section>
 
-    let data = [];
+  <footer class="mt-6 text-xs text-slate-500 dark:text-slate-400">
+    This page runs entirely in your browser.
+  </footer>
+</main>
 
-    const norm = (s) => String(s ?? "").trim().toLowerCase();
+<script>
+  const qEl = document.getElementById("q");
+  const rowsEl = document.getElementById("rows");
+  const emptyState = document.getElementById("emptyState");
+  const statusChip = document.getElementById("statusChip");
+  const clearBtn = document.getElementById("clearBtn");
+  const loadMsg = document.getElementById("loadMsg");
+  const countPill = document.getElementById("countPill");
 
-    function pick(r, keys) {
-      for (const k of keys) {
-        if (r && r[k] != null && String(r[k]).trim() !== "") return String(r[k]);
+  let data = [];
+
+  const norm = (v) => String(v ?? "").toLowerCase().trim();
+
+  function pick(r, keys) {
+    for (const k of keys) {
+      if (r && r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== "") {
+        return String(r[k]);
       }
-      return "";
+    }
+    return "";
+  }
+
+  function setCount(n) {
+    countPill.textContent = String(n);
+  }
+
+  function render(items) {
+    rowsEl.innerHTML = "";
+    emptyState.classList.toggle("hidden", items.length !== 0);
+    setCount(items.length);
+
+    // Subtle zebra striping + hover for a higher-end feel
+    for (let i = 0; i < items.length; i++) {
+      const r = items[i];
+
+      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
+      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
+      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
+      const caProdDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
+      const caImp = pick(r, ["hs_ca_imp", "CA Import"]);
+      const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
+      const caTrans = pick(r, ["hs_ca_trans", "CA Trans"]);
+
+      const tr = document.createElement("tr");
+      tr.className =
+        (i % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-950/30") +
+        " hover:bg-slate-100/70 dark:hover:bg-slate-950/60";
+
+      tr.innerHTML = `
+        <td class="px-4 py-2.5 font-medium">${hs}</td>
+        <td class="px-4 py-2.5">${hsDesc}</td>
+        <td class="px-4 py-2.5 font-medium">${caCode}</td>
+        <td class="px-4 py-2.5">${caProdDesc}</td>
+        <td class="px-4 py-2.5">${caImp}</td>
+        <td class="px-4 py-2.5">${caExp}</td>
+        <td class="px-4 py-2.5">${caTrans}</td>
+      `;
+      rowsEl.appendChild(tr);
+    }
+  }
+
+  function applyFilter() {
+    const q = norm(qEl.value);
+    if (!q) {
+      render(data);
+      return;
     }
 
-    function render(items) {
-      rowsEl.innerHTML = "";
-      emptyState.classList.toggle("hidden", items.length !== 0);
+    const out = data.filter(r => {
+      const hay = [
+        pick(r, ["hs", "hs_code", "HS Code"]),
+        pick(r, ["hs_desc", "HS Description", "description", "Description"]),
+        pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
+        pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
+        pick(r, ["hs_ca_imp", "CA Import"]),
+        pick(r, ["hs_ca_exp", "CA Export"]),
+        pick(r, ["hs_ca_trans", "CA Trans"]),
+      ].map(norm).join(" | ");
 
-      const frag = document.createDocumentFragment();
-      for (const r of items) {
-        const hs = pick(r, ["hs", "hs_code", "HS", "HS Code"]);
-        const hsDesc = pick(r, ["hs_desc", "description", "desc", "Description", "HS Description"]);
-        const caImp = pick(r, ["hs_ca_imp", "ca_imp", "ca_import", "CA Import"]);
-        const caExp = pick(r, ["hs_ca_exp", "ca_exp", "ca_export", "CA Export"]);
-        const caTrans = pick(r, ["hs_ca_trans", "ca_trans", "ca_transit", "CA Trans"]);
-        const caDesc = pick(r, ["ca_desc", "ca_description", "CA Desc", "CA Description"]);
-
-        const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-950/50";
-        tr.innerHTML = `
-          <td class="whitespace-nowrap px-4 py-3 font-medium">${hs}</td>
-          <td class="px-4 py-3">${hsDesc}</td>
-          <td class="whitespace-nowrap px-4 py-3">${caImp}</td>
-          <td class="whitespace-nowrap px-4 py-3">${caExp}</td>
-          <td class="whitespace-nowrap px-4 py-3">${caTrans}</td>
-          <td class="px-4 py-3">${caDesc}</td>
-        `;
-        frag.appendChild(tr);
-      }
-      rowsEl.appendChild(frag);
-      countPill.textContent = String(items.length);
-    }
-
-    function applyFilter() {
-      const q = norm(qEl.value);
-      const lim = Math.max(10, Math.min(5000, parseInt(limitEl.value || "200", 10)));
-      limitEl.value = String(lim);
-      limitLabel.textContent = String(lim);
-
-      if (!q) {
-        render(data.slice(0, lim));
-        return;
-      }
-
-      const out = [];
-      for (const r of data) {
-        const hay = [
-          pick(r, ["hs", "hs_code", "HS", "HS Code"]),
-          pick(r, ["hs_desc", "description", "desc", "Description", "HS Description"]),
-          pick(r, ["hs_ca_imp", "ca_imp", "ca_import", "CA Import"]),
-          pick(r, ["hs_ca_exp", "ca_exp", "ca_export", "CA Export"]),
-          pick(r, ["hs_ca_trans", "ca_trans", "ca_transit", "CA Trans"]),
-          pick(r, ["ca_desc", "ca_description", "CA Desc", "CA Description"]),
-        ].map(norm).join(" | ");
-
-        if (hay.includes(q)) out.push(r);
-        if (out.length >= lim) break;
-      }
-      render(out);
-    }
-
-    clearBtn.addEventListener("click", () => {
-      qEl.value = "";
-      qEl.focus();
-      applyFilter();
+      return hay.includes(q);
     });
 
-    qEl.addEventListener("input", applyFilter);
-    limitEl.addEventListener("input", applyFilter);
+    render(out);
+  }
 
-    (async function init() {
-      try {
-        const res = await fetch("./data.json", { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to load data.json");
-        const json = await res.json();
-        if (!Array.isArray(json)) throw new Error("data.json is not an array");
-        data = json;
+  qEl.addEventListener("input", applyFilter);
 
-        loadMsg.textContent = `Loaded ${data.length.toLocaleString()} rows`;
-        statusChip.classList.remove("hidden");
-        applyFilter();
-        qEl.focus();
-      } catch (e) {
-        loadMsg.textContent = "Error loading data.json. Ensure it exists in the repo root.";
-        console.error(e);
-      }
-    })();
-  </script>
+  clearBtn.addEventListener("click", () => {
+    qEl.value = "";
+    qEl.focus();
+    applyFilter();
+  });
+
+  // Press "/" to focus search
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== qEl) {
+      e.preventDefault();
+      qEl.focus();
+    }
+  });
+
+  (async function init() {
+    try {
+      const res = await fetch("./data.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load data.json");
+      const json = await res.json();
+      if (!Array.isArray(json)) throw new Error("data.json is not an array");
+
+      data = json;
+
+      statusChip.classList.remove("hidden");
+      loadMsg.textContent = `Loaded ${data.length.toLocaleString()} rows`;
+      render(data);
+      qEl.focus();
+    } catch (e) {
+      loadMsg.textContent = "Error loading data.json (check it exists in the repo root).";
+      console.error(e);
+    }
+  })();
+</script>
 </body>
 </html>
