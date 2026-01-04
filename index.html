@@ -5,37 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HS / CA Code Lookup</title>
 
-  <!-- Styling -->
+  <!-- Styling (no installs). Requires internet to load Tailwind CSS. -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <script>
-    // Corporate brand colour
     window.BRAND = { primary: "#00846C" };
   </script>
 
   <style>
     :root { color-scheme: light dark; }
+    body { font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
 
-    /* Font: Aptos if installed, otherwise fallback */
-    body {
-      font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
-    }
-
-    /* Brand helpers */
     .brand-bg { background-color: var(--brand); }
     .brand-text { color: var(--brand); }
     .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
-    .brand-border { border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
 
-    /* Header tint (green + white) */
-    .thead-tint {
-      background-color: color-mix(in srgb, var(--brand) 16%, white);
-    }
+    .thead-tint { background-color: color-mix(in srgb, var(--brand) 16%, white); }
     @media (prefers-color-scheme: dark) {
-      .thead-tint {
-        background-color: color-mix(in srgb, var(--brand) 18%, #0b1220);
-      }
+      .thead-tint { background-color: color-mix(in srgb, var(--brand) 18%, #0b1220); }
     }
+
+    mark { padding: 0 2px; border-radius: 4px; background: color-mix(in srgb, var(--brand) 22%, transparent); }
   </style>
 </head>
 
@@ -59,10 +49,15 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <span id="statusChip"
-          class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">
-          Ready
-        </span>
+        <span id="statusChip" class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">Ready</span>
+
+        <button id="exportBtn"
+          class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
+                 focus:outline-none brand-ring
+                 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
+          Export CSV
+        </button>
+
         <button id="clearBtn"
           class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
                  focus:outline-none brand-ring
@@ -75,23 +70,44 @@
     <div class="mt-5 grid gap-3 lg:grid-cols-3">
       <div class="lg:col-span-2">
         <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
-        <div class="mt-1 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
-                    focus-within:border-transparent focus-within:brand-ring
-                    dark:border-slate-800 dark:bg-slate-900">
-          <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-          <input id="q" type="text"
-            class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-            placeholder="Type HS (01012100) or CA (VBA0HO) or keywords"
-            autocomplete="off" />
-          <span class="hidden sm:inline-flex items-center rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            Press /
-          </span>
+
+        <div class="relative mt-1">
+          <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
+                      focus-within:border-transparent focus-within:brand-ring
+                      dark:border-slate-800 dark:bg-slate-900">
+            <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+
+            <input id="q" type="text"
+              class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              placeholder="Type HS (01012100) or CA (VBA0HO) or keywords"
+              autocomplete="off" />
+
+            <span class="hidden sm:inline-flex items-center rounded-lg bg-slate-100 px-2 py-1 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              Press /
+            </span>
+          </div>
+
+          <!-- Autocomplete -->
+          <div id="acBox"
+               class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
+            <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Suggestions
+            </div>
+            <ul id="acList" class="max-h-72 overflow-auto"></ul>
+          </div>
         </div>
+
         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Tip: try partial prefixes (e.g. “01” or “0101”).
+          Tip: multiple words work (e.g. “fresh apples”). All words must match.
         </p>
+
+        <div id="didYouMean" class="mt-3 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <span class="text-slate-600 dark:text-slate-300">No results.</span>
+          <span class="text-slate-600 dark:text-slate-300">Did you mean:</span>
+          <span id="dymItems" class="ml-1"></span>
+        </div>
       </div>
 
       <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -104,12 +120,10 @@
           </span>
         </div>
 
-        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-          Data source: <span class="font-medium">data.json</span>
-        </div>
+        <div id="loadMsg" class="mt-3 text-xs text-slate-500 dark:text-slate-400">Loading data…</div>
 
-        <div id="loadMsg" class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Loading data…
+        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+          Click HS / CA codes to copy.
         </div>
       </div>
     </div>
@@ -125,10 +139,10 @@
             <th class="px-4 py-3">HS Code</th>
             <th class="px-4 py-3">HS Description</th>
             <th class="px-4 py-3">CA Product Code</th>
-            <th class="px-4 py-3">CA Product Description</th>
-            <th class="px-4 py-3">CA Import</th>
-            <th class="px-4 py-3">CA Export</th>
-            <th class="px-4 py-3">CA Trans</th>
+            <th class="px-4 py-3 hidden md:table-cell">CA Product Description</th>
+            <th class="px-4 py-3 hidden lg:table-cell">CA Import</th>
+            <th class="px-4 py-3 hidden lg:table-cell">CA Export</th>
+            <th class="px-4 py-3 hidden lg:table-cell">CA Trans</th>
           </tr>
         </thead>
         <tbody id="rows" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>
@@ -146,42 +160,111 @@
   </section>
 
   <footer class="mt-6 text-xs text-slate-500 dark:text-slate-400">
-    This page runs entirely in your browser.
+    Runs entirely in your browser. No server required.
   </footer>
 </main>
 
+<!-- Toast -->
+<div id="toast"
+  class="pointer-events-none fixed bottom-5 left-1/2 hidden -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white shadow-lg brand-bg">
+  Copied
+</div>
+
 <script>
+  // ---------- DOM ----------
   const qEl = document.getElementById("q");
   const rowsEl = document.getElementById("rows");
   const emptyState = document.getElementById("emptyState");
   const statusChip = document.getElementById("statusChip");
   const clearBtn = document.getElementById("clearBtn");
+  const exportBtn = document.getElementById("exportBtn");
   const loadMsg = document.getElementById("loadMsg");
   const countPill = document.getElementById("countPill");
+  const toastEl = document.getElementById("toast");
 
+  const acBox = document.getElementById("acBox");
+  const acList = document.getElementById("acList");
+
+  const didYouMean = document.getElementById("didYouMean");
+  const dymItems = document.getElementById("dymItems");
+
+  // ---------- Data ----------
   let data = [];
+  let filtered = [];
 
+  // Suggestion pool (codes + key phrases). Capped for performance.
+  const suggestPool = [];
+  const suggestSet = new Set();
+  const MAX_SUGGEST_POOL = 20000; // cap
+
+  // ---------- Helpers ----------
   const norm = (v) => String(v ?? "").toLowerCase().trim();
+  const clean = (v) => String(v ?? "").trim();
+  const escHtml = (s) => String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
 
   function pick(r, keys) {
     for (const k of keys) {
-      if (r && r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== "") {
-        return String(r[k]);
-      }
+      if (r && r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== "") return String(r[k]);
     }
     return "";
   }
 
-  function setCount(n) {
-    countPill.textContent = String(n);
+  function tokenize(q) {
+    // split on whitespace; keep simple to avoid surprises
+    return norm(q).split(/\s+/).filter(Boolean);
   }
 
-  function render(items) {
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.remove("hidden");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.add("hidden"), 1200);
+  }
+
+  async function copyText(txt) {
+    try {
+      await navigator.clipboard.writeText(txt);
+      showToast("Copied");
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      showToast("Copied");
+    }
+  }
+
+  function highlight(text, tokens) {
+    const raw = clean(text);
+    if (!raw || !tokens.length) return escHtml(raw);
+
+    // highlight each token (case-insensitive), without nested marks
+    let out = escHtml(raw);
+    for (const t of tokens) {
+      if (!t) continue;
+      // escape token for regex
+      const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
+      out = out.replace(re, (m) => `<mark>${escHtml(m)}</mark>`);
+    }
+    return out;
+  }
+
+  function setCount(n) { countPill.textContent = String(n); }
+
+  // ---------- Rendering ----------
+  function render(items, tokens) {
     rowsEl.innerHTML = "";
     emptyState.classList.toggle("hidden", items.length !== 0);
     setCount(items.length);
 
-    // Subtle zebra striping + hover for a higher-end feel
     for (let i = 0; i < items.length; i++) {
       const r = items[i];
 
@@ -193,64 +276,340 @@
       const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
       const caTrans = pick(r, ["hs_ca_trans", "CA Trans"]);
 
+      const zebra = (i % 2 === 0)
+        ? "bg-white dark:bg-slate-900"
+        : "bg-slate-50/60 dark:bg-slate-950/30";
+
       const tr = document.createElement("tr");
-      tr.className =
-        (i % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-950/30") +
-        " hover:bg-slate-100/70 dark:hover:bg-slate-950/60";
+      tr.className = zebra + " hover:bg-slate-100/70 dark:hover:bg-slate-950/60";
 
       tr.innerHTML = `
-        <td class="px-4 py-2.5 font-medium">${hs}</td>
-        <td class="px-4 py-2.5">${hsDesc}</td>
-        <td class="px-4 py-2.5 font-medium">${caCode}</td>
-        <td class="px-4 py-2.5">${caProdDesc}</td>
-        <td class="px-4 py-2.5">${caImp}</td>
-        <td class="px-4 py-2.5">${caExp}</td>
-        <td class="px-4 py-2.5">${caTrans}</td>
+        <td class="px-4 py-2.5 align-top">
+          <button class="hsCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(hs)}">${highlight(hs, tokens)}</button>
+        </td>
+
+        <td class="px-4 py-2.5 align-top text-slate-800 dark:text-slate-100">
+          ${highlight(hsDesc, tokens)}
+        </td>
+
+        <td class="px-4 py-2.5 align-top">
+          <button class="caCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(caCode)}">${highlight(caCode, tokens)}</button>
+        </td>
+
+        <td class="px-4 py-2.5 align-top hidden md:table-cell">
+          ${highlight(caProdDesc, tokens)}
+        </td>
+
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
+          ${highlight(caImp, tokens)}
+        </td>
+
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
+          ${highlight(caExp, tokens)}
+        </td>
+
+        <td class="px-4 py-2.5 align-top hidden lg:table-cell">
+          ${highlight(caTrans, tokens)}
+        </td>
       `;
       rowsEl.appendChild(tr);
     }
+
+    // wire copy clicks (event delegation safe too, but simple here)
+    rowsEl.querySelectorAll(".hsCopy, .caCopy").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const val = btn.getAttribute("data-copy") || "";
+        if (val) copyText(val);
+      });
+    });
+  }
+
+  // ---------- Search ----------
+  function rowHaystack(r) {
+    // keep deterministic list of fields
+    return [
+      pick(r, ["hs", "hs_code", "HS Code"]),
+      pick(r, ["hs_desc", "HS Description", "description", "Description"]),
+      pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
+      pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
+      pick(r, ["hs_ca_imp", "CA Import"]),
+      pick(r, ["hs_ca_exp", "CA Export"]),
+      pick(r, ["hs_ca_trans", "CA Trans"]),
+    ].map(norm).join(" | ");
   }
 
   function applyFilter() {
-    const q = norm(qEl.value);
-    if (!q) {
-      render(data);
+    const tokens = tokenize(qEl.value);
+
+    // hide did-you-mean by default; only show when 0 matches AND user typed something
+    didYouMean.classList.add("hidden");
+    dymItems.innerHTML = "";
+
+    if (!tokens.length) {
+      filtered = data;
+      render(filtered, []);
       return;
     }
 
-    const out = data.filter(r => {
-      const hay = [
-        pick(r, ["hs", "hs_code", "HS Code"]),
-        pick(r, ["hs_desc", "HS Description", "description", "Description"]),
-        pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
-        pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
-        pick(r, ["hs_ca_imp", "CA Import"]),
-        pick(r, ["hs_ca_exp", "CA Export"]),
-        pick(r, ["hs_ca_trans", "CA Trans"]),
-      ].map(norm).join(" | ");
+    // all tokens must match (AND)
+    const out = [];
+    for (const r of data) {
+      const hay = rowHaystack(r);
+      let ok = true;
+      for (const t of tokens) {
+        if (!hay.includes(t)) { ok = false; break; }
+      }
+      if (ok) out.push(r);
+    }
 
-      return hay.includes(q);
-    });
+    filtered = out;
+    render(filtered, tokens);
 
-    render(out);
+    if (filtered.length === 0) {
+      buildDidYouMean(tokens.join(" "));
+    }
   }
 
-  qEl.addEventListener("input", applyFilter);
+  // ---------- Autocomplete ----------
+  function addSuggestion(s) {
+    const v = clean(s);
+    if (!v) return;
+    const key = v.toLowerCase();
+    if (suggestSet.has(key)) return;
+    suggestSet.add(key);
+    suggestPool.push(v);
+  }
+
+  function buildSuggestPool() {
+    // Codes + descriptions from data, but capped.
+    for (const r of data) {
+      if (suggestPool.length >= MAX_SUGGEST_POOL) break;
+
+      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
+      const ca = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
+      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
+      const caDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
+
+      addSuggestion(hs);
+      addSuggestion(ca);
+
+      // Add a few “key phrases”: first 6 words of descriptions
+      if (hsDesc) addSuggestion(hsDesc.split(/\s+/).slice(0, 6).join(" "));
+      if (caDesc) addSuggestion(caDesc.split(/\s+/).slice(0, 6).join(" "));
+    }
+  }
+
+  function showAutocomplete(items) {
+    acList.innerHTML = "";
+    if (!items.length) {
+      acBox.classList.add("hidden");
+      return;
+    }
+
+    for (const s of items) {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <button class="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-950/50">
+          ${escHtml(s)}
+        </button>
+      `;
+      li.querySelector("button").addEventListener("click", () => {
+        qEl.value = s;
+        acBox.classList.add("hidden");
+        applyFilter();
+        qEl.focus();
+      });
+      acList.appendChild(li);
+    }
+    acBox.classList.remove("hidden");
+  }
+
+  function updateAutocomplete() {
+    const q = norm(qEl.value);
+    if (!q || q.length < 2) { acBox.classList.add("hidden"); return; }
+
+    // Use only last token for autocomplete, so multi-word searches remain useful
+    const tokens = tokenize(qEl.value);
+    const last = tokens[tokens.length - 1] || "";
+    if (last.length < 2) { acBox.classList.add("hidden"); return; }
+
+    const hits = [];
+    const max = 8;
+
+    // Prioritize prefix matches, then contains
+    for (const s of suggestPool) {
+      const n = s.toLowerCase();
+      if (n.startsWith(last)) {
+        hits.push(s);
+        if (hits.length >= max) break;
+      }
+    }
+    if (hits.length < max) {
+      for (const s of suggestPool) {
+        const n = s.toLowerCase();
+        if (!n.startsWith(last) && n.includes(last)) {
+          hits.push(s);
+          if (hits.length >= max) break;
+        }
+      }
+    }
+    showAutocomplete(hits);
+  }
+
+  // ---------- Did-you-mean (fuzzy) ----------
+  function levenshtein(a, b) {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    const m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+
+    // 1D DP for speed
+    const dp = new Array(n + 1);
+    for (let j = 0; j <= n; j++) dp[j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      let prev = dp[0];
+      dp[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const temp = dp[j];
+        const cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
+        dp[j] = Math.min(
+          dp[j] + 1,          // deletion
+          dp[j - 1] + 1,      // insertion
+          prev + cost         // substitution
+        );
+        prev = temp;
+      }
+    }
+    return dp[n];
+  }
+
+  function buildDidYouMean(query) {
+    const q = clean(query);
+    if (!q) return;
+
+    // Compare against suggestion pool, but cap comparisons for speed.
+    const candidates = [];
+    const MAX_COMPARE = 5000;
+    const pool = suggestPool.slice(0, Math.min(suggestPool.length, MAX_COMPARE));
+
+    // Prefer shorter candidates around same length
+    const qLen = q.length;
+
+    for (const s of pool) {
+      const sLen = s.length;
+      if (Math.abs(sLen - qLen) > 20) continue; // skip far lengths
+      const d = levenshtein(q, s);
+      // simple scoring: smaller distance better; normalize by length
+      const score = d / Math.max(1, Math.max(qLen, sLen));
+      candidates.push({ s, score });
+    }
+
+    candidates.sort((a, b) => a.score - b.score);
+    const best = candidates.slice(0, 3).filter(x => x.score <= 0.45); // threshold for usefulness
+
+    if (!best.length) return;
+
+    dymItems.innerHTML = "";
+    for (const { s } of best) {
+      const btn = document.createElement("button");
+      btn.className = "ml-2 rounded-full px-3 py-1 text-xs font-medium text-white brand-bg";
+      btn.textContent = s;
+      btn.addEventListener("click", () => {
+        qEl.value = s;
+        didYouMean.classList.add("hidden");
+        applyFilter();
+        qEl.focus();
+      });
+      dymItems.appendChild(btn);
+    }
+    didYouMean.classList.remove("hidden");
+  }
+
+  // ---------- CSV Export ----------
+  function toCsvValue(v) {
+    const s = String(v ?? "");
+    // escape double quotes by doubling
+    const esc = s.replaceAll('"', '""');
+    return `"${esc}"`;
+  }
+
+  function exportCsv() {
+    const rows = filtered.length ? filtered : data;
+
+    const headers = [
+      "HS Code",
+      "HS Description",
+      "CA Product Code",
+      "CA Product Description",
+      "CA Import",
+      "CA Export",
+      "CA Trans",
+    ];
+
+    const lines = [];
+    lines.push(headers.map(toCsvValue).join(","));
+
+    for (const r of rows) {
+      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
+      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
+      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
+      const caProdDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
+      const caImp = pick(r, ["hs_ca_imp", "CA Import"]);
+      const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
+      const caTrans = pick(r, ["hs_ca_trans", "CA Trans"]);
+
+      lines.push([
+        hs, hsDesc, caCode, caProdDesc, caImp, caExp, caTrans
+      ].map(toCsvValue).join(","));
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `hs_ca_lookup_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- Events ----------
+  qEl.addEventListener("input", () => {
+    updateAutocomplete();
+    applyFilter();
+  });
+
+  qEl.addEventListener("focus", updateAutocomplete);
+  qEl.addEventListener("blur", () => setTimeout(() => acBox.classList.add("hidden"), 150));
 
   clearBtn.addEventListener("click", () => {
     qEl.value = "";
     qEl.focus();
+    acBox.classList.add("hidden");
+    didYouMean.classList.add("hidden");
     applyFilter();
   });
 
-  // Press "/" to focus search
+  exportBtn.addEventListener("click", exportCsv);
+
   window.addEventListener("keydown", (e) => {
+    // Press "/" to focus search
     if (e.key === "/" && document.activeElement !== qEl) {
       e.preventDefault();
       qEl.focus();
     }
+    // Escape closes autocomplete
+    if (e.key === "Escape") {
+      acBox.classList.add("hidden");
+      didYouMean.classList.add("hidden");
+    }
   });
 
+  // ---------- Init ----------
   (async function init() {
     try {
       const res = await fetch("./data.json", { cache: "no-store" });
@@ -260,9 +619,14 @@
 
       data = json;
 
+      // Build suggestion pool after load
+      buildSuggestPool();
+
       statusChip.classList.remove("hidden");
       loadMsg.textContent = `Loaded ${data.length.toLocaleString()} rows`;
-      render(data);
+
+      filtered = data;
+      render(filtered, []);
       qEl.focus();
     } catch (e) {
       loadMsg.textContent = "Error loading data.json (check it exists in the repo root).";
