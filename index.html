@@ -5,25 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HS / CA Code Lookup</title>
 
-  <!-- Styling (requires internet to load Tailwind). -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script>window.BRAND = { primary: "#00846C" };</script>
 
   <style>
     :root { color-scheme: light dark; }
     body { font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
-
     .brand-bg { background-color: var(--brand); }
     .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
-
     .thead-tint { background-color: color-mix(in srgb, var(--brand) 16%, white); }
     @media (prefers-color-scheme: dark) {
       .thead-tint { background-color: color-mix(in srgb, var(--brand) 18%, #0b1220); }
     }
     mark { padding: 0 2px; border-radius: 4px; background: color-mix(in srgb, var(--brand) 22%, transparent); }
-
-    /* Mobile: increase touch target */
     .tap { min-height: 44px; }
   </style>
 </head>
@@ -49,24 +43,18 @@
   </div>
 </header>
 
-<!-- Sticky mobile search bar -->
-<div class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+<div class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
   <div class="mx-auto max-w-7xl px-4 py-3">
     <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
 
-    <div class="relative mt-1">
+    <div class="mt-1">
       <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm
                   focus-within:border-transparent focus-within:brand-ring
                   dark:border-slate-800 dark:bg-slate-900">
-        <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-
         <input id="q" type="text"
           class="w-full bg-transparent text-base outline-none placeholder:text-slate-400 sm:text-sm"
           placeholder="HS (01012100), CA (VBA0HO), or keywords"
           autocomplete="off" inputmode="search" />
-
         <button id="clearBtn"
           class="tap rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium shadow-sm hover:bg-slate-50
                  focus:outline-none brand-ring
@@ -74,32 +62,17 @@
           Clear
         </button>
       </div>
-
-      <!-- Autocomplete -->
-      <div id="acBox"
-           class="absolute z-40 mt-2 hidden w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
-        <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Suggestions
-        </div>
-        <ul id="acList" class="max-h-72 overflow-auto"></ul>
-      </div>
     </div>
 
     <div class="mt-2 flex items-center justify-between">
       <p class="text-xs text-slate-500 dark:text-slate-400">
-        Multiple words allowed. All words must match.
+        Partial words work. Any word can match.
       </p>
       <span id="countPill"
         class="rounded-full px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-100"
         style="background-color: color-mix(in srgb, #00846C 14%, white);">
         0
       </span>
-    </div>
-
-    <!-- Did you mean -->
-    <div id="didYouMean" class="mt-3 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <span class="text-slate-600 dark:text-slate-300">No results. Did you mean:</span>
-      <span id="dymItems" class="ml-1"></span>
     </div>
 
     <div id="loadMsg" class="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading data…</div>
@@ -110,15 +83,12 @@
   <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div class="overflow-auto">
       <table class="min-w-full text-left text-sm">
-        <thead class="sticky top-[108px] sm:top-[104px] thead-tint text-xs uppercase tracking-wide text-slate-800 dark:text-slate-100">
+        <thead class="thead-tint text-xs uppercase tracking-wide text-slate-800 dark:text-slate-100">
           <tr>
             <th class="px-4 py-3">HS Code</th>
             <th class="px-4 py-3">HS Description</th>
             <th class="px-4 py-3">CA Product Code</th>
             <th class="px-4 py-3 hidden md:table-cell">CA Product Description</th>
-            <th class="px-4 py-3 hidden lg:table-cell">CA Import</th>
-            <th class="px-4 py-3 hidden lg:table-cell">CA Export</th>
-            <th class="px-4 py-3 hidden lg:table-cell">CA Trans</th>
           </tr>
         </thead>
         <tbody id="rows" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>
@@ -129,46 +99,43 @@
       <div class="mx-auto max-w-md">
         <div class="text-base font-semibold">No matching records</div>
         <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Try fewer keywords or a shorter HS/CA prefix.
+          Try fewer keywords or a shorter prefix.
         </div>
       </div>
     </div>
+
+    <div id="moreWrap" class="hidden border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+      <button id="moreBtn"
+        class="tap w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium shadow-sm hover:bg-slate-50
+               focus:outline-none brand-ring
+               dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
+        Show more
+      </button>
+      <div id="moreHint" class="mt-2 text-center text-xs text-slate-500 dark:text-slate-400"></div>
+    </div>
   </section>
-
-  <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">
-    Tip: tap HS / CA codes to copy.
-  </div>
 </main>
-
-<div id="toast"
-  class="pointer-events-none fixed bottom-5 left-1/2 hidden -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white shadow-lg brand-bg">
-  Copied
-</div>
 
 <script>
   const qEl = document.getElementById("q");
   const rowsEl = document.getElementById("rows");
   const emptyState = document.getElementById("emptyState");
-  const statusChip = document.getElementById("statusChip");
   const clearBtn = document.getElementById("clearBtn");
+  const statusChip = document.getElementById("statusChip");
   const loadMsg = document.getElementById("loadMsg");
   const countPill = document.getElementById("countPill");
-  const toastEl = document.getElementById("toast");
+  const moreWrap = document.getElementById("moreWrap");
+  const moreBtn = document.getElementById("moreBtn");
+  const moreHint = document.getElementById("moreHint");
 
-  const acBox = document.getElementById("acBox");
-  const acList = document.getElementById("acList");
+  let raw = [];
+  let searchText = [];     // precomputed lowercase strings
+  let filteredIdx = [];    // indices into raw
+  let shown = 0;
 
-  const didYouMean = document.getElementById("didYouMean");
-  const dymItems = document.getElementById("dymItems");
+  const PAGE_SIZE = 150;
+  const INPUT_DEBOUNCE_MS = 220;
 
-  let data = [];
-  let filtered = [];
-
-  const suggestPool = [];
-  const suggestSet = new Set();
-  const MAX_SUGGEST_POOL = 20000;
-
-  const norm = (v) => String(v ?? "").toLowerCase().trim();
   const clean = (v) => String(v ?? "").trim();
   const escHtml = (s) => String(s ?? "")
       .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -181,316 +148,30 @@
     return "";
   }
 
-  function tokenize(q) { return norm(q).split(/\s+/).filter(Boolean); }
-
-  function showToast(msg) {
-    toastEl.textContent = msg;
-    toastEl.classList.remove("hidden");
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => toastEl.classList.add("hidden"), 1200);
-  }
-
-  async function copyText(txt) {
-    try {
-      await navigator.clipboard.writeText(txt);
-      showToast("Copied");
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = txt; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy"); ta.remove();
-      showToast("Copied");
-    }
-  }
-
-  function highlight(text, tokens) {
-    const raw = clean(text);
-    if (!raw || !tokens.length) return escHtml(raw);
-    let out = escHtml(raw);
-    for (const t of tokens) {
-      if (!t) continue;
-      const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
-      out = out.replace(re, (m) => `<mark>${escHtml(m)}</mark>`);
-    }
-    return out;
+  function tokenize(q) {
+    return q.toLowerCase().trim().split(/\s+/).filter(Boolean);
   }
 
   function setCount(n) { countPill.textContent = String(n); }
 
-  function rowHaystack(r) {
-    return [
-      pick(r, ["hs", "hs_code", "HS Code"]),
-      pick(r, ["hs_desc", "HS Description", "description", "Description"]),
-      pick(r, ["CA Product Code", "ca_product_code", "ca_code"]),
-      pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]),
-      pick(r, ["hs_ca_imp", "CA Import"]),
-      pick(r, ["hs_ca_exp", "CA Export"]),
-      pick(r, ["hs_ca_trans", "CA Trans"]),
-    ].map(norm).join(" | ");
+  function debounce(fn, ms) {
+    let t = null;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
   }
 
-  function render(items, tokens) {
+  function resetTable() {
     rowsEl.innerHTML = "";
-    emptyState.classList.toggle("hidden", items.length !== 0);
-    setCount(items.length);
+    shown = 0;
+  }
 
-    for (let i = 0; i < items.length; i++) {
-      const r = items[i];
+  function renderPage() {
+    const end = Math.min(shown + PAGE_SIZE, filteredIdx.length);
+    const frag = document.createDocumentFragment();
+
+    for (let p = shown; p < end; p++) {
+      const idx = filteredIdx[p];
+      const r = raw[idx];
 
       const hs = pick(r, ["hs", "hs_code", "HS Code"]);
       const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-      const caCode = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
-      const caProdDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
-      const caImp = pick(r, ["hs_ca_imp", "CA Import"]);
-      const caExp = pick(r, ["hs_ca_exp", "CA Export"]);
-      const caTrans = pick(r, ["hs_ca_trans", "CA Trans"]);
-
-      const zebra = (i % 2 === 0)
-        ? "bg-white dark:bg-slate-900"
-        : "bg-slate-50/60 dark:bg-slate-950/30";
-
-      const tr = document.createElement("tr");
-      tr.className = zebra + " hover:bg-slate-100/70 dark:hover:bg-slate-950/60";
-
-      tr.innerHTML = `
-        <td class="px-4 py-2.5 align-top">
-          <button class="tap hsCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(hs)}">
-            ${highlight(hs, tokens)}
-          </button>
-        </td>
-
-        <td class="px-4 py-2.5 align-top">
-          <div class="break-words">${highlight(hsDesc, tokens)}</div>
-        </td>
-
-        <td class="px-4 py-2.5 align-top">
-          <button class="tap caCopy font-semibold underline-offset-2 hover:underline" data-copy="${escHtml(caCode)}">
-            ${highlight(caCode, tokens)}
-          </button>
-        </td>
-
-        <td class="px-4 py-2.5 align-top hidden md:table-cell">
-          <div class="break-words">${highlight(caProdDesc, tokens)}</div>
-        </td>
-
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caImp, tokens)}</td>
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caExp, tokens)}</td>
-        <td class="px-4 py-2.5 align-top hidden lg:table-cell">${highlight(caTrans, tokens)}</td>
-      `;
-      rowsEl.appendChild(tr);
-    }
-
-    rowsEl.querySelectorAll(".hsCopy, .caCopy").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const val = btn.getAttribute("data-copy") || "";
-        if (val) copyText(val);
-      });
-    });
-  }
-
-  function applyFilter() {
-    const tokens = tokenize(qEl.value);
-    didYouMean.classList.add("hidden");
-    dymItems.innerHTML = "";
-
-    if (!tokens.length) {
-      filtered = data;
-      render(filtered, []);
-      return;
-    }
-
-    const out = [];
-    for (const r of data) {
-      const hay = rowHaystack(r);
-      let ok = true;
-      for (const t of tokens) {
-        if (!hay.includes(t)) { ok = false; break; }
-      }
-      if (ok) out.push(r);
-    }
-
-    filtered = out;
-    render(filtered, tokens);
-
-    if (filtered.length === 0) buildDidYouMean(tokens.join(" "));
-  }
-
-  function addSuggestion(s) {
-    const v = clean(s);
-    if (!v) return;
-    if (v.length > 80) return;
-    const key = v.toLowerCase();
-    if (suggestSet.has(key)) return;
-    suggestSet.add(key);
-    suggestPool.push(v);
-  }
-
-  function buildSuggestPool() {
-    for (const r of data) {
-      if (suggestPool.length >= MAX_SUGGEST_POOL) break;
-
-      const hs = pick(r, ["hs", "hs_code", "HS Code"]);
-      const ca = pick(r, ["CA Product Code", "ca_product_code", "ca_code"]);
-      const hsDesc = pick(r, ["hs_desc", "HS Description", "description", "Description"]);
-      const caDesc = pick(r, ["CA Product Description", "ca_product_desc", "ca_desc", "ca_description"]);
-
-      addSuggestion(hs);
-      addSuggestion(ca);
-
-      if (hsDesc) addSuggestion(hsDesc.split(/\s+/).slice(0, 6).join(" "));
-      if (caDesc) addSuggestion(caDesc.split(/\s+/).slice(0, 6).join(" "));
-
-      // Add individual words so typos like "Cofffe" can suggest "coffee"
-      const text = `${hsDesc} ${caDesc}`.toLowerCase();
-      const words = text.split(/[^a-z]+/).filter(w => w.length >= 4);
-      for (const w of words) {
-        addSuggestion(w);
-        if (suggestPool.length >= MAX_SUGGEST_POOL) break;
-      }
-    }
-  }
-
-  function showAutocomplete(items) {
-    acList.innerHTML = "";
-    if (!items.length) { acBox.classList.add("hidden"); return; }
-
-    for (const s of items) {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <button class="tap w-full px-3 py-3 text-left text-base sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-950/50">
-          ${escHtml(s)}
-        </button>
-      `;
-      li.querySelector("button").addEventListener("click", () => {
-        qEl.value = s;
-        acBox.classList.add("hidden");
-        applyFilter();
-        qEl.focus();
-      });
-      acList.appendChild(li);
-    }
-    acBox.classList.remove("hidden");
-  }
-
-  function updateAutocomplete() {
-    const tokens = tokenize(qEl.value);
-    const last = tokens[tokens.length - 1] || "";
-    if (last.length < 2) { acBox.classList.add("hidden"); return; }
-
-    const hits = [];
-    const max = 8;
-
-    for (const s of suggestPool) {
-      const n = s.toLowerCase();
-      if (n.startsWith(last)) { hits.push(s); if (hits.length >= max) break; }
-    }
-    if (hits.length < max) {
-      for (const s of suggestPool) {
-        const n = s.toLowerCase();
-        if (!n.startsWith(last) && n.includes(last)) { hits.push(s); if (hits.length >= max) break; }
-      }
-    }
-    showAutocomplete(hits);
-  }
-
-  function levenshtein(a, b) {
-    a = a.toLowerCase(); b = b.toLowerCase();
-    const m = a.length, n = b.length;
-    if (!m) return n;
-    if (!n) return m;
-    const dp = new Array(n + 1);
-    for (let j = 0; j <= n; j++) dp[j] = j;
-    for (let i = 1; i <= m; i++) {
-      let prev = dp[0];
-      dp[0] = i;
-      for (let j = 1; j <= n; j++) {
-        const temp = dp[j];
-        const cost = (a[i - 1] === b[j - 1]) ? 0 : 1;
-        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost);
-        prev = temp;
-      }
-    }
-    return dp[n];
-  }
-
-  function buildDidYouMean(query) {
-    const q = clean(query);
-    if (!q) return;
-
-    const candidates = [];
-    const MAX_COMPARE = 5000;
-    const pool = suggestPool.slice(0, Math.min(suggestPool.length, MAX_COMPARE));
-    const qLen = q.length;
-
-    for (const s of pool) {
-      const sLen = s.length;
-      if (Math.abs(sLen - qLen) > 20) continue;
-      const d = levenshtein(q, s);
-      const score = d / Math.max(1, Math.max(qLen, sLen));
-      candidates.push({ s, score });
-    }
-    candidates.sort((a, b) => a.score - b.score);
-
-    const best = candidates.slice(0, 3).filter(x => x.score <= 0.45);
-    if (!best.length) return;
-
-    dymItems.innerHTML = "";
-    for (const { s } of best) {
-      const btn = document.createElement("button");
-      btn.className = "tap ml-2 rounded-full px-3 py-2 text-sm font-medium text-white brand-bg";
-      btn.textContent = s;
-      btn.addEventListener("click", () => {
-        qEl.value = s;
-        didYouMean.classList.add("hidden");
-        applyFilter();
-        qEl.focus();
-      });
-      dymItems.appendChild(btn);
-    }
-    didYouMean.classList.remove("hidden");
-  }
-
-  qEl.addEventListener("input", () => {
-    updateAutocomplete();
-    applyFilter();
-  });
-
-  qEl.addEventListener("focus", updateAutocomplete);
-  qEl.addEventListener("blur", () => setTimeout(() => acBox.classList.add("hidden"), 150));
-
-  clearBtn.addEventListener("click", () => {
-    qEl.value = "";
-    qEl.focus();
-    acBox.classList.add("hidden");
-    didYouMean.classList.add("hidden");
-    applyFilter();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "/" && document.activeElement !== qEl) { e.preventDefault(); qEl.focus(); }
-    if (e.key === "Escape") { acBox.classList.add("hidden"); didYouMean.classList.add("hidden"); }
-  });
-
-  (async function init() {
-    try {
-      const res = await fetch("./data.json", { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to load data.json");
-      const json = await res.json();
-      if (!Array.isArray(json)) throw new Error("data.json is not an array");
-
-      data = json;
-      buildSuggestPool();
-
-      statusChip.classList.remove("hidden");
-      loadMsg.textContent = `Loaded ${data.length.toLocaleString()} rows`;
-
-      filtered = data;
-      render(filtered, []);
-      qEl.focus();
-    } catch (e) {
-      loadMsg.textContent = "Error loading data.json (check it exists in the repo root).";
-      console.error(e);
-    }
-  })();
-</script>
-</body>
-</html>
+      const caCode = pick(r,
