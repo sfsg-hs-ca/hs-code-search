@@ -8,28 +8,53 @@
   <!-- Styling (no installs). Requires internet to load this CSS. -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <script>
+    // Brand colour
+    window.BRAND = { primary: "#00846C" };
+  </script>
+
   <style>
     :root { color-scheme: light dark; }
+
+    /* Font: Aptos if installed, otherwise fallback */
+    body { font-family: Aptos, "Aptos Display", "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+
+    /* Brand helpers */
+    .brand-bg { background-color: var(--brand); }
+    .brand-text { color: var(--brand); }
+    .brand-border { border-color: color-mix(in srgb, var(--brand) 35%, transparent); }
+    .brand-ring { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent); }
   </style>
 </head>
 
 <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+  <script>
+    document.documentElement.style.setProperty("--brand", (window.BRAND?.primary || "#00846C"));
+  </script>
+
   <header class="border-b border-slate-200/70 bg-white/70 backdrop-blur dark:border-slate-800 dark:bg-slate-950/70">
     <div class="mx-auto max-w-6xl px-4 py-6">
       <div class="flex items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight">HS Code Lookup</h1>
-          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            Search HS codes and CA codes.
-          </p>
+        <div class="flex items-center gap-3">
+          <img src="./logo.png" alt="Company logo"
+               class="h-10 w-10 rounded-lg object-contain bg-white p-1 shadow-sm dark:bg-slate-900" />
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">HS Code Lookup</h1>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Search HS codes and CA codes.
+            </p>
+          </div>
         </div>
+
         <div class="flex items-center gap-2">
           <span id="statusChip"
-            class="hidden rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white dark:bg-white dark:text-slate-900">
+            class="hidden rounded-full px-3 py-1 text-xs font-medium text-white brand-bg">
             Ready
           </span>
+
           <button id="clearBtn"
             class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm hover:bg-slate-50
+                   focus:outline-none brand-ring
                    dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
             Clear
           </button>
@@ -39,18 +64,22 @@
       <div class="mt-5 grid gap-3 md:grid-cols-3">
         <div class="md:col-span-2">
           <label class="block text-xs font-medium text-slate-600 dark:text-slate-300">Search</label>
+
           <div class="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm
+                      focus-within:border-transparent focus-within:brand-ring
                       dark:border-slate-800 dark:bg-slate-900">
             <svg class="h-5 w-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
+
             <input id="q" type="text"
               class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
               placeholder="Type HS code or keywords (e.g. 0803, apples, frozen)"
               autocomplete="off" />
           </div>
+
           <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Tip: you can type a partial HS code or any keyword from description/CA fields.
+            Tip: use partial HS code prefixes (e.g. “08” or “0803”).
           </p>
         </div>
 
@@ -59,6 +88,7 @@
           <div class="mt-2 flex items-center gap-2">
             <input id="limit" type="number" min="10" max="5000" value="200"
               class="w-28 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none
+                     focus:border-transparent brand-ring
                      dark:border-slate-800 dark:bg-slate-950" />
             <span class="text-xs text-slate-500 dark:text-slate-400">rows</span>
           </div>
@@ -103,7 +133,7 @@
         <div class="mx-auto max-w-md">
           <div class="text-base font-semibold">No matches</div>
           <div class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Try fewer keywords or a shorter HS prefix (e.g. “08” or “0803”).
+            Try fewer keywords or a shorter HS prefix.
           </div>
         </div>
       </div>
